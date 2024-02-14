@@ -1,0 +1,64 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[latin1]{inputenc}
+\usepackage{indentfirst}
+\usepackage{amsmath,amssymb}
+\DeclareMathOperator*{\E}{\mathbb{E}}
+\DeclareMathOperator*{\Proba}{\mathbb{P}}
+\DeclareMathOperator*{\Indicator}{\mathbb{1}}
+
+\begin{document}
+\graphicspath{{/home/user/Documents/tex/assets/}}
+\title{Statistically optimal v3 LP ranges for incentivized stable pools}
+\author{Sety \footnote{
+      \href{https://etherscan.io/address/0xFaf2A8b5fa78cA2786cEf5F7e19f6942EC7cB531}{\includegraphics[width=0.5cm]{ens.png}}
+      \href{https://debank.com/profile/0xfaf2a8b5fa78ca2786cef5f7e19f6942ec7cb531}{\includegraphics[width=0.5cm]{debank.png} }
+      \href{https://github.com/Sety-project}{\includegraphics[width=0.5cm]{github.png}}
+      \href{https://t.me/daviidarr}{\includegraphics[width=0.5cm]{telegram.png}}
+      \href{https://X.com/Sety08052022}{\includegraphics[width=0.5cm]{X.png}}
+      \includegraphics[width=0.5cm]{discord.png} Sety\#2111
+      }}
+
+\date{\today}
+\maketitle
+
+\abstract We compute statstically optimal v3 LP ranges for incentivized stable pools. 
+\begin{enumerate}
+\item Extract relevant historical data from the graph
+\item Model the process as a whitenoise
+\item Estimate rewards within given ranges
+\item Optimize
+\end{enumerate}
+
+\section{Definitions}
+We  consider a pool where a user:
+\begin{itemize}
+      \item provided liquidity $l$ in a static range $[p_l, p_u]$
+      \item holds reserves $x_t, y_t$ out of total reserves $X_t, Y_t$. 
+      \footnote{As per \href{https://blog.uniswap.org/uniswap-v3-math-primer-2}{uniswap blog}, when in range we have:
+      \[
+      \begin{cases}
+            x_t = l \frac{\sqrt{p_u}-\sqrt{P}}{\sqrt{p_u}\sqrt{P}} \\
+            y_t = l (\sqrt{P}-\sqrt{p_l})
+      \end{cases}
+      \]}
+      \item earning fees $f_t = f^{pool} \cdot \tilde{V}_t \cdot l \cdot 1_{P \in [p_l,p_u]}$, where we define diluted volume as $\tilde{V}=\frac{V_t}{L_t}$
+\end{itemize}
+The pool is incentivized by a per block reward 
+\begin{equation} 
+R_t = w_f \frac{f_t}{F_t} + w_x \frac{x_t}{X_t} + w_y \frac{y_t}{Y_t}
+\end{equation}
+$w_f, w_x, w_y$ are weights defined in the merkl contract.\\
+
+\section{Modelling}
+The pool has a price $P_t$ and a diluted volume $\frac{V_t}{L_t}$ that we model as a stationary whitenoise of joint density $\phi(P, \tilde{V})$.
+\newline \indent We further assume that the user's liquidity does not affect this dymanics.
+\paragraph*{estimation}
+For underlyings with more than a few months of existence, there is typically more than enough data to estimate this density over a period where stationariy is a reasonnable assumption\\
+Expected rewards are then estimated as:
+\begin{equation}
+\E[R_t] = w_f \E[\frac{V_t}{V_t}] + w_x \frac{x_t}{X_t} + w_y \frac{y_t}{Y_t}
+\end{equation}
+
+\end{document}
