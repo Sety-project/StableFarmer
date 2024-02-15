@@ -24,41 +24,57 @@
 \maketitle
 
 \abstract We compute statstically optimal v3 LP ranges for incentivized stable pools. 
-\begin{enumerate}
-\item Extract relevant historical data from the graph
-\item Model the process as a whitenoise
-\item Estimate rewards within given ranges
-\item Optimize
-\end{enumerate}
 
-\section{Definitions}
-We  consider a pool where a user:
-\begin{itemize}
-      \item provided liquidity $l$ in a static range $[p_l, p_u]$
-      \item holds reserves $x_t, y_t$ out of total reserves $X_t, Y_t$. 
-      \footnote{As per \href{https://blog.uniswap.org/uniswap-v3-math-primer-2}{uniswap blog}, when in range we have:
-      \[
-      \begin{cases}
-            x_t = l \frac{\sqrt{p_u}-\sqrt{P}}{\sqrt{p_u}\sqrt{P}} \\
-            y_t = l (\sqrt{P}-\sqrt{p_l})
-      \end{cases}
-      \]}
-      \item earning fees $f_t = f^{pool} \cdot \tilde{V}_t \cdot l \cdot 1_{P \in [p_l,p_u]}$, where we define diluted volume as $\tilde{V}=\frac{V_t}{L_t}$
-\end{itemize}
-The pool is incentivized by a per block reward 
+\section{Objective function: expected rewards}
+We  consider a pool where a user provides liquidity $l$ in a static range $[p_l, p_u]$.
+
+\subsection{Rewards}
+\indent As per \href{https://docs.angle.money/merkl/introduction#customizable-distribution-formula}{Merkl doc} The pool is incentivized by a per block reward 
 \begin{equation} 
 R_t = w_f \frac{f_t}{F_t} + w_x \frac{x_t}{X_t} + w_y \frac{y_t}{Y_t}
 \end{equation}
-$w_f, w_x, w_y$ are weights defined in the merkl contract.\\
+$\Rightarrow$ Let's compute the expectation of each term, and divide by the capital commited to get a ROI.
+\subsection{Holdings}
+User holds reserves $x_t, y_t$ out of total reserves $X_t, Y_t$. 
+As per \href{https://blog.uniswap.org/uniswap-v3-math-primer-2}{uniswap blog}, when in range we have:
+\[
+\begin{cases}
+      x_t = l \frac{\sqrt{p_u}-\sqrt{P}}{\sqrt{p_u}\sqrt{P}} \\
+      y_t = l (\sqrt{P}-\sqrt{p_l})
+\end{cases}
+\]
+$\Rightarrow$ To get the expectation of holdings, all we need to estimate is the price distribution.
+
+\subsection{Capital}
+This also implies that capital commited is:
+\begin{equation}
+C = y + x \cdot P = 2 l \sqrt{P} [1 - \frac{1}{2}(\frac{\sqrt{P}}{\sqrt{p_u}}+\frac{\sqrt{p_l}}{\sqrt{P}})]
+\end{equation}
+$\Rightarrow$ We'll use it in ROI calculation.
+
+\subsection{Fees}
+As per \href{https://whitepaper.io/document/708/uniswap-whitepaper}{uniswap whitepaper}, the fees are given by:
+\begin{eqnarray*}
+      feeGrowthGlobalX128 &= f^{pool} \sum{\frac{V_t}{L_t}} \\
+      feeGrowthInsideX128 &= f^{pool} \sum{1_{P \in [p_l,p_u]} \frac{V_t}{L_t}} \\
+      positionFees_t &= feeGrowthInsideX128 \cdot l \\
+\end{eqnarray*}
+$\Rightarrow$ To get the expectation of fees, all we need to estimate is the conditional expected diluted volume, and sum it over any candidate range.
+\begin{equation}
+\tilde{V}(i)=\E[\frac{V_t}{L_t} | P_t \in [tick(i)]]
+\end{equation}
+
 
 \section{Modelling}
-The pool has a price $P_t$ and a diluted volume $\frac{V_t}{L_t}$ that we model as a stationary whitenoise of joint density $\phi(P, \tilde{V})$.
+The pool has a price $P_t$ and a diluted volume $\frac{V_t}{L_t}$ that we model as a i.i.d process of joint density $\phi(P, \tilde{V})$.
 \newline \indent We further assume that the user's liquidity does not affect this dymanics.
-\paragraph*{estimation}
-For underlyings with more than a few months of existence, there is typically more than enough data to estimate this density over a period where stationariy is a reasonnable assumption\\
-Expected rewards are then estimated as:
-\begin{equation}
-\E[R_t] = w_f \E[\frac{V_t}{V_t}] + w_x \frac{x_t}{X_t} + w_y \frac{y_t}{Y_t}
-\end{equation}
+For underlyings with more than a few months of existence, there is typically more than enough data to estimate this density over a period where stationarity is a reasonnable assumption\\
+\subsection{data}
+From \href{https://thegraph.com/hosted-service/subgraph/uniswap/uniswap-v3}{uniswap subgraph} we query times-series for:
+\begin{itemize}
+      \item $P_t$
+      \item $V_t$
+      \item $L_t$
+\end{itemize}
 
 \end{document}
