@@ -55,12 +55,17 @@ $\Rightarrow$ We'll use it in ROI calculation.
 \subsection{Fees}
 As per \href{https://whitepaper.io/document/708/uniswap-whitepaper}{uniswap whitepaper}, the fees are given by:
 \begin{eqnarray*}
-      feeGrowthGlobalX128 &= f^{pool} \sum{\frac{V_t}{L_t}} \\
-      feeGrowthInsideX128 &= f^{pool} \sum{1_{P \in [p_l,p_u]} \frac{V_t}{L_t}} \\
-      positionFees_t &= feeGrowthInsideX128 \cdot l \\
+      Pool.feeGrowthGlobal?X128 &= f^{pool} \sum{\frac{V_t}{L_t}} \\
+      Position.feeGrowthInside?X128 &= f^{pool} \sum{1_{P \in [p_l,p_u]} \frac{V_t}{L_t}} \\
+      positionFees_t &= Position.feeGrowthInside?X128 \cdot l \\
 \end{eqnarray*}
-$\Rightarrow$ To get the expectation of fees, all we need to estimate is the conditional expected diluted volume, and sum it over any candidate range.
-\begin{equation}
+$\Rightarrow$ To get the expectation of fees, we need to estimate the volume per amount of liquidity within that tick, and sum it over any candidate range.
+\footnote{
+More precisely, the cumulative fees per amount of liquidity accrued within a tick can be accurately computed from $Tick.feeGrowthOutside?X128$.
+It records fees per liquidity accrued above (resp below) the tick for ticks below (resp above) current price.
+We can compute the fees per liquidity accrued within the tick by taking the difference between consecutive ticks to get an accurate fee growth per tick.
+\newline ...however we yet have to find a subgraph that provides this data.
+}\begin{equation}
 \tilde{V}(i)=\E[\frac{V_t}{L_t} | P_t \in [tick(i)]]
 \end{equation}
 
@@ -70,11 +75,32 @@ The pool has a price $P_t$ and a diluted volume $\frac{V_t}{L_t}$ that we model 
 \newline \indent We further assume that the user's liquidity does not affect this dymanics.
 For underlyings with more than a few months of existence, there is typically more than enough data to estimate this density over a period where stationarity is a reasonnable assumption\\
 \subsection{data}
-From \href{https://thegraph.com/hosted-service/subgraph/uniswap/uniswap-v3}{uniswap subgraph} we query times-series for:
-\begin{itemize}
-      \item $P_t$
-      \item $V_t$
-      \item $L_t$
-\end{itemize}
+As an example we pull data for \href{https://arbiscan.io/address/0x7CF803e8d82A50504180f417B8bC7a493C0a0503}{UniswapV3 USDC-DAI 0.01\%}, which is \href{https://merkl.angle.money/pool-report?pool=0x7CF803e8d82A50504180f417B8bC7a493C0a0503&chain=42161&to=1708012167&from=1705592967}{STIP incentivised via merkl} from \href{https://thegraph.com/explorer/subgraphs/FQ6JYszEKApsBpAmiHesRsd9Ygc6mzmpNRANeVQFYoVX?view=Overview&chain=arbitrum-one}{uniswap subgraph}
+\begin{verbatim}
+swaps(
+      where: {pool: "0x7CF803e8d82A50504180f417B8bC7a493C0a0503"}
+      orderBy: timestamp
+      orderDirection: asc)
+      {
+      timestamp    
+      tokenIn {
+      symbol
+      }
+      tokenOut {
+      symbol
+      }
+      amountIn
+      amountOut
+      }    
+liquidityPoolHourlySnapshots(
+      where: {pool: "0x7CF803e8d82A50504180f417B8bC7a493C0a0503"}
+      orderBy: timestamp
+      orderDirection: desc) 
+      {
+      timestamp
+      activeLiquidity
+      tick
+      }
+\end{verbatim}
 
 \end{document}
